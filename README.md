@@ -40,9 +40,10 @@ Follow the steps:
 1. **Clone** the repo:  
    `git clone https://github.com/nicodfhl/mountain-peaks.git`
 1. **Build & Run** the application by running:  
-   `cd mountain-peaks`
+   `cd mountain-peaks`  
    `docker compose up --build`
 1. **Open [`http://localhost:8088`](http://localhost:8088)** in your web browser.
+1. Press `CTRL+C` in the terminal to stop the application.
 
 ## Change logs
 

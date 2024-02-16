@@ -41,7 +41,7 @@ ENV VIRTUAL_ENV=/app/.venv \
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 
 # Copy the source code into the container but just the necessary
-COPY mountain_peaks ./mountain_peaks
+COPY . ./app
 
 # set the project’s entrypoint
 # ENTRYPOINT ["python", "-m", "mountain_peaks.main"]
@@ -64,4 +64,4 @@ USER appuser
 EXPOSE 8000
 
 # Run the application.
-CMD cd ./mountain_peaks ; uvicorn --reload main:app --host=0.0.0.0 --port=8000
+CMD cd ./app/mountain-peaks ; uvicorn --reload main:app --host=0.0.0.0 --port=8000
