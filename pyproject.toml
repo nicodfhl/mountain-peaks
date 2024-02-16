@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "mountain-peaks"
+version = "0.1.0"
+description = "Explore mountains around the world with MFI"
+authors = ["Nicolas Desfachelles (DataPy) <Nicolas.Desfachelles@DataPy.fr>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.10.11"
+fastapi = "^0.109.2"
+uvicorn = "^0.27.1"
+sqlmodel = "^0.0.14"
+pandas = "^2.2.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+flake8 = "^7.0.0"
+mypy = "^1.8.0"
+pylint = "^3.0.3"
+coverage = "^7.4.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
