@@ -47,6 +47,8 @@ Follow the steps:
 
 ## Change logs
 
+- Version 0.2
+  - Init postgreSQL dB within psycopg2 (the PostgreSQL client library for python)
 - Version 0.1
   - deploy the app to a fully-featured Kubernetes env. - _in progress_
   - add simple backend
@@ -57,6 +59,5 @@ Follow the steps:
 
 ## What's next
 
-- Init postgreSQL dB
 - Develop backend
 - Unittest solution
