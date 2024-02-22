@@ -13,10 +13,10 @@ from sqlalchemy.orm import Session
 
 from mountain_peaks.backend.main import app
 from mountain_peaks.backend.db.create import Base, get_db, get_session
-from mountain_peaks.backend.app.crud_ops import add_a_peak, delete_a_peak, get_a_peak_by_id
+from mountain_peaks.backend.app.crud_ops import add_a_peak, delete_a_peak, get_a_peak_by_id, find_peaks_into_bbox, find_peaks_by_attr
 
 from mountain_peaks.backend.db.models import DBPeak
-from mountain_peaks.backend.app.schemas import PeakCreate
+from mountain_peaks.backend.app.schemas import PeakCreate, PeakAttr, BBox
 
 # Setup the TestClient
 test_client = TestClient(app)
@@ -104,7 +104,7 @@ def test_endpoint_3_read_peak():
     in_data = {
         "name": "Test Peak 2",
         "height": 2587.0,
-        "latitude": -60,
+        "latitude":-60,
         "longitude": 189.0,
     }
     # Create a peak
@@ -125,16 +125,34 @@ def test_endpoint_3_read_peak():
 
 
 def test_endpoint_4_update_peak():
-    peak_id = 1
+    # Create a peak
+    in_data = {
+        "name": "Test Peak 1",
+        "height": 2587.0,
+        "latitude":-60,
+        "longitude": 189.0,
+    }
+    resp = test_client.post("/peaks/", json=in_data)
+    peak_id = resp.json().get("pid")
+    # update it
     up_data = {
         "name": "Updated Peak 1",
         "height": 999,
-        "latitude": +60,
-        "longitude": -189.0,
+        "latitude":+60,
+        "longitude":-189.0,
     }
     resp = test_client.put(f"/peaks/{peak_id}", json=up_data)
     assert resp.status_code == 200, resp.text
     compare_peaks(out_data=resp.json(), in_data=up_data, peak_id=peak_id)
+    up_data_partial = {
+        "height": 2222,
+        "longitude": 56,
+    }
+    resp_p = test_client.put(f"/peaks/{peak_id}", json=up_data_partial)
+    assert resp_p.status_code == 200, resp_p.text
+    # update original dict
+    up_data.update(up_data_partial)
+    compare_peaks(out_data=resp_p.json(), in_data=up_data, peak_id=peak_id)
 
 
 def test_endpoint_5_delete_peak():
@@ -148,6 +166,30 @@ def test_endpoint_5_delete_peak():
     assert ko_resp.status_code == 404, ko_resp.text
 
 
+def test_endpoint_7_get_peaks_inside_bbox():
+    # Create a peak
+    in_data = {
+        "name": "Test Peak 1",
+        "height": 2587.0,
+        "latitude": 5,
+        "longitude": -5
+    }
+    large_bbox = {
+        "latitude_min": -80,
+        "longitude_min": -170,
+        "latitude_max": 80,
+        "longitude_max": 170
+    }
+    _ = test_client.post("/peaks/", json=in_data)
+    resp_large = test_client.post("/get_peaks_inside_bbox", json=large_bbox)
+    assert resp_large.status_code == 200, resp_large.text
+    assert len(resp_large.json()) == 1
+    # check if with an erroneous bound, it fails
+    large_bbox["longitude_max"] = 9999
+    resp_bad_bound = test_client.post("/get_peaks_inside_bbox", json=large_bbox)
+    assert resp_bad_bound.status_code == 422, resp_bad_bound.text
+
+
 @pytest.fixture
 def session() -> Generator[Session, None, None]:
     # Same utility than setup and teardown but in a single method
@@ -155,7 +197,11 @@ def session() -> Generator[Session, None, None]:
     Base.create_all_tables(engine=test_engine)
     db_session = get_session(engine=test_engine)()
     # 2. create some peak items in the test db
-    db_item = DBPeak(pid=123, name='Peak 123', height=1230, latitude=12.3, longitude=-123.)
+    db_item = DBPeak(pid=123,
+                     name="Default Peak 000",
+                     height=1234,
+                     latitude=0.,
+                     longitude=0.)
     db_session.add(db_item)
     db_session.commit()
 
@@ -181,7 +227,7 @@ def test_operation_2_add_peak(session: Session) -> None:
     assert peak.longitude == 4.321
 
 
-def test_operation_5_delete_peak(session: Session) -> None:
+def test_operation_5_delete_peak(session: Session):
     # Add a peak
     peak = add_a_peak(session=session,
                       peak=PeakCreate(
@@ -201,3 +247,55 @@ def test_operation_5_delete_peak(session: Session) -> None:
     # try to get the deleted peak again
     with pytest.raises(Exception):
         get_a_peak_by_id(session=session, info=peak_id)
+
+
+def test_operation_6_find_peaks_by_attr(session: Session):
+    # method used by get_peaks_from_attr route
+    # Add 1 peak (already one in deb lat:0, lon:0)
+    peak_inside = add_a_peak(session=session,
+                      peak=PeakCreate(
+                          name="Test Peak attr",
+                          height=1234,  # same height than the initial peak
+                          latitude=45,
+                          longitude=-90))
+    # find all peaks named Test Peak inside
+    peak_attr = PeakAttr(name="Test Peak attr")
+    f_peak = find_peaks_by_attr(session=session, attr=peak_attr)[0]
+    assert f_peak.name == "Test Peak attr"
+    assert f_peak.height == 1234
+    # find all peaks with a height of 4321m
+    peak_attr = PeakAttr(height=1234)
+    f_peaks = find_peaks_by_attr(session=session, attr=peak_attr)
+    assert len(f_peaks) == 2
+    assert sorted([f_peaks[0].name, f_peaks[1].name]) == ["Default Peak 000", "Test Peak attr"]
+
+
+def test_operation_7_find_peaks_into_bbox(session: Session):
+    # method used by get_peaks_inside_bbox route
+    # Add 1 peak (already one in deb lat:0, lon:0)
+    peak_inside = add_a_peak(session=session,
+                      peak=PeakCreate(
+                          name="Test Peak inside",
+                          height=1111.,
+                          latitude=45,
+                          longitude=-90))
+    # check all peaks inside
+    bbox_all = BBox(latitude_min=-89, latitude_max=89, longitude_min=-179, longitude_max=180)
+    peaks_all_inside = find_peaks_into_bbox(session=session, bbox=bbox_all)
+    assert len(peaks_all_inside) == 2
+    # check first peak inside
+    bbox_0 = BBox(latitude_min=0, latitude_max=0, longitude_min=0, longitude_max=0)
+    peaks_0_inside = find_peaks_into_bbox(session=session, bbox=bbox_0)
+    assert len(peaks_0_inside) == 1
+    assert peaks_0_inside[0].name == "Default Peak 000"
+    # check second peak inside
+    bbox_n = BBox(latitude_min=5, latitude_max=50, longitude_min=-100, longitude_max=-80)
+    peaks_n_inside = find_peaks_into_bbox(session=session, bbox=bbox_n)
+    assert len(peaks_n_inside) == 1
+    assert peaks_n_inside[0].name == "Test Peak inside"
+    # check no peak inside
+    bbox_no = BBox(latitude_min=-89, latitude_max=-88, longitude_min=-179, longitude_max=-178)
+    assert len(find_peaks_into_bbox(session=session, bbox=bbox_no)) == 0
+    # check if ValueError is correctly raised when max lower than min for a bbox
+    with pytest.raises(ValueError):
+        _ = BBox(latitude_min=89, latitude_max=-89, longitude_min=0, longitude_max=1)
