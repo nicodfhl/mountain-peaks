@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..db.models import DBPeak
 from .schemas import (
-    BBox,
+    BBox as BBoxORM,
     Peak as PeakORM,
     PeakCreate as PeakCreateORM,
     PeakUpdate as PeakUpdateORM,
@@ -26,34 +26,39 @@ def get_a_peak_by_id(session: Session, pid: int) -> DBPeak:
     return peak_item
 
 
-def find_peaks_into_bbox(session: Session, bbox: BBox = None) -> List[DBPeak]:
+def find_peaks_into_bbox(session: Session, bbox: BBoxORM) -> List[DBPeak]:
     # left-bottom-right-top given
-    select_peaks = select(DBPeak).where(bbox.latitude_min <= DBPeak.latitude).where(DBPeak.latitude <= bbox.latitude_max).where(bbox.longitude_min <= DBPeak.longitude).where(DBPeak.longitude <= bbox.longitude_max)
-    _ = session.execute(select_peaks).scalars().all()
+    select_peaks = select(DBPeak).where(and_(bbox.latitude_min <= DBPeak.latitude,
+                                             DBPeak.latitude <= bbox.latitude_max,
+                                             bbox.longitude_min <= DBPeak.longitude,
+                                             DBPeak.longitude <= bbox.longitude_max))
+    return session.execute(select_peaks).scalars().all()
 
 
 def find_peaks_by_attr(session: Session, attr: PeakAttrORM) -> List[DBPeak]:
     attr_d = attr.model_dump()
     if len(attr_d) == 0:
         raise BadFormatEntryException
-    if val := attr_d.get("name"):
+    if p_name := attr_d.get("name"):
         # peak's name given
-        select_peaks = select(DBPeak).where(DBPeak.name == val)
-        peak_item = session.execute(select_peaks).scalar_one_or_none()
+        select_peaks = select(DBPeak).where(DBPeak.name == p_name)
+        # no peaks should have the same name
+        peak_items = [session.execute(select_peaks).scalar_one_or_none()]
     else:
         # peak's height given,
         # find it with a tolerance of 1 meter
-        val = float(attr_d.get("height"))
+        p_height = float(attr_d["height"])
         select_peaks = select(DBPeak).where(
             and_(
-                val + 1.0 >= DBPeak.height,
-                val - 1.0 <= DBPeak.height,
+                p_height + 1.0 >= DBPeak.height,
+                p_height - 1.0 <= DBPeak.height,
             )
         )
-        peak_item = session.execute(select_peaks).scalars().all()
-    if peak_item is None:
+        # some peaks can have the same height
+        peak_items = session.execute(select_peaks).scalars().all()
+    if len(peak_items) == 0:
         raise PeakNotFoundException
-    return peak_item
+    return peak_items
 
 
 def check_peak_exists(session: Session, peak_data: PeakCreateORM) -> None:
@@ -64,7 +69,7 @@ def check_peak_exists(session: Session, peak_data: PeakCreateORM) -> None:
         if k in ["name", "height"]:
             attr_d[k] = v
     try:
-        return find_peaks_by_attr(session=session, attr=PeakAttrORM(**attr_d))
+        return find_peaks_by_attr(session=session, attr=PeakAttrORM(**attr_d))[0]
     except PeakNotFoundException:
         # the peak elment does not exist yet
         return False
@@ -83,7 +88,8 @@ def update_a_peak(session: Session, peak_id: int, peak_data: PeakUpdateORM) -> P
     peak_item = get_a_peak_by_id(session=session, pid=peak_id)
     # .model_dump() returns a dictionary of the model's fields and values
     for k, v in peak_data.model_dump().items():
-        setattr(peak_item, k, v)
+        if v is not None:
+            setattr(peak_item, k, v)
     session.commit()
     session.refresh(peak_item)
     return PeakORM(**peak_item.__dict__)

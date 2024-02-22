@@ -97,7 +97,7 @@ def delete_a_mountain_peak(peak_id: int, db: Session = Depends(get_db)) -> PeakO
         )
 
 
-@app.post("/get_peaks_from_attr", response_model=PeakAttrORM)
+@app.post("/get_peaks_from_attr", response_model=List[PeakORM])
 def get_mountain_peak_by_attribute(from_attr: PeakAttrORM, db: Session = Depends(get_db)) -> List[PeakORM]:
     try:
         return find_peaks_by_attr(session=db, attr=from_attr)
@@ -108,7 +108,7 @@ def get_mountain_peak_by_attribute(from_attr: PeakAttrORM, db: Session = Depends
         )
 
 
-@app.post("/get_peaks_inside_bbox", response_model=BBoxORM)
+@app.post("/get_peaks_inside_bbox", response_model=List[PeakORM])
 def get_mountain_peaks_by_bbox(inside_bbox: BBoxORM, db: Session = Depends(get_db)) -> List[PeakORM]:
     try:
         return find_peaks_into_bbox(session=db, bbox=inside_bbox)
