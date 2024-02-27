@@ -1,4 +1,4 @@
-# Mountain Peaks App - v0.2
+# Mountain Peaks App - v0.3
 
 ## Table of Contents
 
@@ -42,13 +42,28 @@ Follow the steps:
 1. **Build & Run** the application by running:  
    `cd mountain-peaks`  
    `docker compose up --build`
-1. **Open [`http://localhost:8088`](http://localhost:8088)** in your web browser.
+1. **Open [`http://localhost:80`](http://localhost:80)** in your web browser.
 1. Press `CTRL+C` in the terminal to stop the application.
+
+## Use the app
+
+Try the different **entry points** by using the API Swagger UI feature provided by FastAPI to explore, call and test your API directly from the browser **[`http://localhost/docs`](http://localhost/docs)**:
+
+1. Unfold an open point (_right down arrow_)
+1. Click on the right button **`Try it out`**
+1. If required, fill the request body by inspiring yourself from the request sample given
+1. Click on the button **`Execute`** just below
+1. Check the _Server response_ success, update your entry if code status is not `200` or `202` and re-execute
+
+_Notice that FastAPI provides an alternative API documentation access with_ **_[`http://localhost/redoc`](http://localhost/redoc)_**
 
 ## Change logs
 
+- Version 0.3
+  - Develop backend
+  - Unittest solution
 - Version 0.2
-  - Init postgreSQL dB within psycopg2 (the PostgreSQL client library for python)
+  - Init postgreSQL dB within psycopg (the PostgreSQL client library for python)
 - Version 0.1
   - deploy the app to a fully-featured Kubernetes env. - _in progress_
   - add simple backend
@@ -59,5 +74,4 @@ Follow the steps:
 
 ## What's next
 
-- Develop backend
-- Unittest solution
+- use SQLModel lib to simplify the implementation
