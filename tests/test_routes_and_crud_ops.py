@@ -104,7 +104,7 @@ def test_endpoint_3_read_peak():
     in_data = {
         "name": "Test Peak 2",
         "height": 2587.0,
-        "latitude":-60,
+        "latitude": -60,
         "longitude": 189.0,
     }
     # Create a peak
@@ -138,8 +138,8 @@ def test_endpoint_4_update_peak():
     up_data = {
         "name": "Updated Peak 1",
         "height": 999,
-        "latitude":+60,
-        "longitude":-189.0,
+        "latitude": +60,
+        "longitude": -189.0,
     }
     resp = test_client.put(f"/peaks/{peak_id}", json=up_data)
     assert resp.status_code == 200, resp.text
@@ -168,22 +168,38 @@ def test_endpoint_5_delete_peak():
 
 def test_endpoint_7_get_peaks_inside_bbox():
     # Create a peak
-    in_data = {
+    in_data_1 = {
         "name": "Test Peak 1",
         "height": 2587.0,
         "latitude": 5,
         "longitude": -5
     }
+    in_data_2 = {
+        "name": "Test Peak 2",
+        "height": 2587.0,
+        "latitude": -75,
+        "longitude": -165
+    }
+    _ = test_client.post("/peaks/", json=in_data_1)
+    _ = test_client.post("/peaks/", json=in_data_2)
     large_bbox = {
         "latitude_min": -80,
-        "longitude_min": -170,
         "latitude_max": 80,
+        "longitude_min": -170,
         "longitude_max": 170
     }
-    _ = test_client.post("/peaks/", json=in_data)
     resp_large = test_client.post("/get_peaks_inside_bbox", json=large_bbox)
     assert resp_large.status_code == 200, resp_large.text
-    assert len(resp_large.json()) == 1
+    assert len(resp_large.json()) == 2
+    small_bbox = {
+        "latitude_min": -10,
+        "latitude_max": 10,
+        "longitude_min": -10,
+        "longitude_max": 10
+    }
+    resp_small = test_client.post("/get_peaks_inside_bbox", json=small_bbox)
+    assert resp_small.status_code == 200, resp_small.text
+    assert len(resp_small.json()) == 1
     # check if with an erroneous bound, it fails
     large_bbox["longitude_max"] = 9999
     resp_bad_bound = test_client.post("/get_peaks_inside_bbox", json=large_bbox)
