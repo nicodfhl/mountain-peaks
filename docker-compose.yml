@@ -1,5 +1,11 @@
 version: '3.10'
 
+secrets:
+  postgres_user:
+    file: ./secrets/postgres_user.txt
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+
 services:
   backend:
     build: .
@@ -10,16 +16,30 @@ services:
       - 80:80
     depends_on:
       - postgres-db
+    secrets:
+      - postgres_user
+      - postgres_password
+    environment:
+      DEBUG: False
+      POSTGRES_DB: mp_db
+      DATABASE_PORT: 5432
+      POSTGRES_SERVER: postgres-db
+      POSTGRES_USER_FILE: /run/secrets/postgres_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      AUTHORIZE_PROD_DB_TABLES_CREATION: YES
 
   postgres-db:
     image: postgres:12.0-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data/
+    secrets:
+      - postgres_user
+      - postgres_password
     environment:
-      - POSTGRES_USER=fake_username
-      - POSTGRES_PASSWORD=fake_password
-      - POSTGRES_DB=mp_db
-    expose: 
+      POSTGRES_DB: mp_db
+      POSTGRES_USER_FILE: /run/secrets/postgres_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    expose:
       - 5432
 
 volumes:

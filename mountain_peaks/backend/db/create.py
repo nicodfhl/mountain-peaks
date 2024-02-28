@@ -11,7 +11,9 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from .config import get_base_uri
 
 # create the db engine instance
-_ENGINE = create_engine(get_base_uri())
+_ENGINE = None
+if getenv("AUTHORIZE_PROD_DB_TABLES_CREATION", "NO") == "YES":
+    _ENGINE = create_engine(get_base_uri())
 
 
 def get_session(engine=_ENGINE):
