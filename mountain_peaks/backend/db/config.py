@@ -1,4 +1,5 @@
 from os import getenv
+from pydantic import PostgresDsn
 
 
 def get_base_uri():
@@ -12,7 +13,13 @@ def get_base_uri():
         _db_pass = f.read()
     _debug = getenv("DEBUG")
     _db_server = getenv("POSTGRES_SERVER")
-    _db_port = getenv("DATABASE_PORT", "5432")
-    _db_name = getenv("POSTGRES_DB", "mp_db")
-    # return f"postgresql+psycopg://{user}:{password}@{server}/{db}"
-    return f"postgresql://{_db_user}:{_db_pass}@{_db_server}:{_db_port}/{_db_name}"
+    _db_port = int(getenv("DATABASE_PORT"))
+    _db_name = getenv("POSTGRES_DB")
+    return str(PostgresDsn.build(
+        scheme="postgresql",
+        username=_db_user,
+        password=_db_pass,
+        host=_db_server,
+        port=_db_port,
+        path=_db_name,
+    ))
