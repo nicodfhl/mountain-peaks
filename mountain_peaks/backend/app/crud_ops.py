@@ -43,7 +43,8 @@ def find_peaks_by_attr(session: Session, attr: PeakAttrORM) -> List[DBPeak]:
         # peak's name given
         select_peaks = select(DBPeak).where(DBPeak.name == p_name)
         # no peaks should have the same name
-        peak_items = [session.execute(select_peaks).scalar_one_or_none()]
+        req_by_name = session.execute(select_peaks).scalar_one_or_none()
+        peak_items = [req_by_name] if req_by_name is not None else []
     else:
         # peak's height given,
         # find it with a tolerance of 1 meter
